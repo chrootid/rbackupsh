@@ -16,10 +16,15 @@
 # Save and Validate Destination
 # Enable
 
+function linestip {
+	echo "----------------------------------------------------------------"
+}
+
 # Backup Running Process
 function running_process {
     if [[ -n $($SSHRCE "pgrep -f $USERNAME|xargs ps|grep -Ev '(sshd:|pgrep|COMMAND)'") ]];then
-        echo "Running Process Check          : Already running. Please wait!"
+        echo " Running Process Check          : Already running. Please wait!"
+		linestip
 		exit
     fi
 }
@@ -28,12 +33,13 @@ function running_process {
 function authentication_key {
 	AUTHTYPE=$(awk '/authtype:/ {print $2}' "$DSTBACKUPCONFIG")
     if [[ $AUTHTYPE == "password" ]];then
-        echo "Authentication Type            : Password"
-		echo ""
-		echo "This script only works for Key Authentication Type"
+        echo " Authentication Type            : Password"
+		linestip
+		echo " NOTE: This script only works for Key Authentication Type"
+		linestip
 		exit
     elif [[ $AUTHTYPE == "key" ]];then
-		echo "Authentication Type            : SSH Key"
+		echo " Authentication Type            : SSH Key"
         SSHRCE="ssh -i $SSHKEY -p $RSSHPORT $USERNAME@$RBACKUP"
     fi
 }
@@ -42,7 +48,7 @@ function authentication_key {
 function remote_backup_host {
 	RBACKUP=$(awk '/host:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -n $RBACKUP ]];then
-		echo "Remote Backup Host             : $RBACKUP"
+		echo " Remote Backup Host             : $RBACKUP"
 	fi
 }
 
@@ -50,11 +56,12 @@ function remote_backup_host {
 function sftp_type {
 	TYPE=$(grep -w "type:" "$DSTBACKUPCONFIG"|awk '{print $2}')
     if [[ $TYPE == "SFTP" ]];then
-		echo "Backup Type                    : $TYPE"
+		echo " Backup Type                    : $TYPE"
 	else
-		echo "Backup Type                    : $TYPE"
-		echo ""
-        echo "This script only works for SFTP Destination Type"
+		echo " Backup Type                    : $TYPE"
+		linestip
+        echo " NOTE: This script only works for SFTP Destination Type"
+		linestip
 		exit
     fi
 }
@@ -63,12 +70,15 @@ function sftp_type {
 function additional_destination_backup {
 	DSTBACKUPCONFIG=$(grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination|head -n1)
     if [[ -f $DSTBACKUPCONFIG ]];then
-		echo "Additional Destination Config  : $DSTBACKUPCONFIG"
+		echo " Additional Destination Config  : $DSTBACKUPCONFIG"
     else
-		echo "Additional Destination Config  : Not Found"
-		echo ""
-        echo "There is no active additional destinations backup setting in WHM Backup."
-        echo "Please enable it from WHM -> Backup -> Backup Configuration -> Additional Destinations -> Destination Type: SFTP -> Create New Destination"
+		echo " Additional Destination Config  : Not Found"
+		linestip
+        echo " NOTE: There is no active additional destinations backup setting "
+		echo " in WHM Backup. Please enable it from WHM -> Backup -> Backup "
+		echo " Configuration -> Additional Destinations -> Destination Type: "
+		echo " SFTP -> Create New Destination"
+		linestip
         exit
     fi
 }
@@ -78,9 +88,9 @@ function path_dir {
 	RBACKUPDIR=$(awk '/path:/ {print $2}' "$DSTBACKUPCONFIG"|sed "s/'//g")
 	if [[ -z $RBACKUPDIR ]];then
 		RBACKUPDIR="~"
-		echo "Path Directory                 : $RBACKUPDIR"
+		echo " Path Directory                 : $RBACKUPDIR"
 	else
-		echo "Path Directory                 : $RBACKUPDIR"
+		echo " Path Directory                 : $RBACKUPDIR"
 	fi
 }
 
@@ -89,9 +99,9 @@ function ssh_port {
 	RSSHPORT=$(awk '/port:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -z $RSSHPORT ]];then
 		RSSHPORT="22"
-		echo "SSH Port                       : $RSSHPORT"
+		echo " SSH Port                       : $RSSHPORT"
 	else
-		echo "SSH Port                       : $RSSHPORT"
+		echo " SSH Port                       : $RSSHPORT"
 	fi
 }
 
@@ -99,11 +109,12 @@ function ssh_port {
 function ssh_private_key {
 	SSHKEY=$(awk '/privatekey:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -f $SSHKEY ]];then
-		echo "SSH Private Key                : $SSHKEY"
+		echo " SSH Private Key                : $SSHKEY"
 	else
-		echo "SSH Private Key                : not found"
-		echo ""
-		echo "Check your SSH Private Key file"
+		echo " SSH Private Key                : not found"
+		linestip
+		echo " NOTE: Please check your SSH Private Key file"
+		linestip
 		exit
 	fi
 }
@@ -112,10 +123,12 @@ function ssh_private_key {
 function sftp_username {
 	USERNAME=$(awk '/username:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -n $USERNAME ]];then
-		echo "Username                       : $USERNAME"
+		echo " Username                       : $USERNAME"
 	elif [[ -z $USERNAME ]];then
-		echo "Username                       : Not found"
-		echo ""
+		echo " Username                       : Not found"
+		linestip
+		echo " NOTE: There is no SSH/FTP/SFTP Account to connect"
+		linestip
 		exit
 	fi
 }
@@ -124,12 +137,20 @@ function sftp_username {
 function ssh_connection_test {
 	EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0');
 	if [[ $EXITVALUE -eq 0 ]];then
-		echo "SSH Connection Test            : Successful"
+		echo " SSH Connection Test            : Successful"
 	elif [[ $EXITVALUE -eq 255 ]];then
-		echo "SSH Connection Test            : Connection failed"
+		echo " SSH Connection Test            : Connection failed"
+		linestip
+		echo " NOTE: Please check your SSH Connection settings. Username, Port,"
+		echo " IP/Host and make sure if SSH Port was accepted from firewall"
+		linestip
 		exit
 	else
-		echo "SSH Connection Test            : Connection failed"
+		echo " SSH Connection Test            : Connection failed"
+		linestip
+		echo " NOTE: Please check your SSH Connection settings. Username, Port,"
+		echo " IP/Host and make sure if SSH Port was accepted from firewall"
+		linestip
 		exit
 	fi
 }
@@ -138,11 +159,11 @@ function ssh_connection_test {
 	function local_backup_config {
 	LOCALBACKUP=$(awk '/BACKUPENABLE:/ {print $2}' /var/cpanel/backups/config|sed "s/'//g")
 	if [[ $LOCALBACKUP == "yes" ]];then
-		echo "Local Backup Status            : Enabled. Should be disabled to prevent disk usage full"
+		echo " Local Backup Status            : Enabled. Should be disabled to prevent disk usage full"
 	elif [[ $LOCALBACKUP == "no" ]];then
-		echo "Local Backup Status            : Disabled"
+		echo " Local Backup Status            : Disabled"
 	elif [[ $LOCALBACKUP == "no" ]];then
-		echo "Local Backup Status            : Unknown"
+		echo " Local Backup Status            : Unknown"
 	fi
 }
 
@@ -150,11 +171,14 @@ function ssh_connection_test {
 function additional_backup_status {
 	DESTINATIONSTATUS=$(awk '/disabled:/ {print $2}' /var/cpanel/backups/*.backup_destination)
 	if [[ $DESTINATIONSTATUS -eq 0 ]];then
-		echo "Remote Backup Status           : Enabled"
+		echo " Remote Backup Status           : Enabled"
 	elif [[ $DESTINATIONSTATUS -eq 1 ]];then
-		echo "Remote Backup Status           : Disabled"
-		echo ""
-		echo "Please enable it from WHM -> Backup -> Backup Configuration -> Additional Destinations -> Destination Type: SFTP -> Create New Destination"
+		echo " Remote Backup Status           : Disabled"
+		linestip
+		echo " NOTE: Please enable it from WHM -> Backup -> Backup "
+		echo " Configuration -> Additional Destinations -> Destination Type: "
+		echo " SFTP -> Create New Destination"
+		linestip
 		exit
 	fi
 }
@@ -163,18 +187,57 @@ function additional_backup_status {
 function total_cpanel_account {
 	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowners|wc -l)
 	if [[ $TOTALCPANELACCOUNT -eq 0 ]];then
-		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Account"
+		echo " Total cPanel Account           : $TOTALCPANELACCOUNT Account"
+		linestip
+		echo " NOTE: There is no cPanel Account to be backuped"
+		linestip
 		exit
 	elif [[ $TOTALCPANELACCOUNT -eq 1 ]];then
-		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Account"
+		echo " Total cPanel Account           : $TOTALCPANELACCOUNT Account"
 	elif [[ $TOTALCPANELACCOUNT -ge 2 ]];then
-		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Accounts"
+		echo " Total cPanel Account           : $TOTALCPANELACCOUNT Accounts"
 	fi
+}
+
+# cPmove Backup Status
+function cpmove_backup_status {
+	
+	$SSHRCE "echo > $BACKUPDIR/logs/failed" 2>/dev/null
+	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowners|wc -l)
+	
+	# cPmove Backup Check
+	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
+		if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" ]];then
+			$SSHRCE "echo "failed: cpmove-"$CPUSER".tar.gz not found" >> $BACKUPDIR/logs/failed" 2>/dev/null
+		fi
+	done
+	TOTALFAILEDCPMOVE=$($SSHRCE "grep cpmove-*.tar.gz $BACKUPDIR/logs/failed"|wc -l)
+	TOTALCPANELCOMPLETEDCPMOVE=$(( TOTALCPANELACCOUNT - TOTALFAILEDCPMOVE ))
+	echo " cPmove Backup                  : $TOTALCPANELCOMPLETEDCPMOVE Complted, $TOTALFAILEDCPMOVE Failed"
+	
+	# cPuser Homedir Check
+	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
+		if [[ $($SSHRCE "ls -ld $BACKUPDIR/homedir/$CPUSER 2>/dev/null"|awk '{print $9}') == "$BACKUPDIR/homedir/$CPUSER" ]];then
+			$SSHRCE "echo "failed: "$CPUSER" homedir" >> $BACKUPDIR/logs/failed" 2>/dev/null
+		fi
+	done
+	TOTALFAILEDCPHOME=$($SSHRCE "grep homedir $BACKUPDIR/logs/failed"|wc -l)
+	TOTALCPANELCOMPLETEDCPHOME=$(( TOTALCPANELACCOUNT - TOTALFAILEDCPHOME ))
+	echo " cPuser Homedir Backup          : $TOTALCPANELCOMPLETEDCPHOME Complted, $TOTALFAILEDCPHOME Failed"
+	
+	# Total Backup Size
+	if [[ $($SSHRCE "ls -ld $BACKUPDIR 2>/dev/null"|awk '{print $9}') == "$BACKUPDIR" ]];then
+		TOTALBACKUPSIZE=$($SSHRCE "du -sh $RBACKUPDIR/$BACKUPDIR")
+	else
+		echo " NOTE: Backup Dir not found"
+		linestip
+	fi
+	echo " Total Backup Size              : $TOTALBACKUPSIZE"
 }
 
 # Create Backup Directory
 function create_backup_dir {
-    if [[ $($SSHRCE "ls $RBACKUPDIR" 2>/dev/null) != $(date +%F) ]];then
+    if [[ $($SSHRCE "ls $RBACKUPDIR" 2>/dev/null) != "$BACKUPDIR" ]];then
         $SSHRCE "mkdir -p $BACKUPDIR/accounts";
         $SSHRCE "mkdir -p $BACKUPDIR/homedir";
     fi
@@ -186,6 +249,8 @@ function cpmove_backup_skip_homedir {
 	if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" ]];then
 		if [[ ! -f /home/cpmove-$CPUSER.tar.gz ]];then
 			/scripts/pkgacct --skiphomedir "$CPUSER" >/dev/null 2>&1
+			rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
+		elif [[ -f /home/cpmove-$CPUSER.tar.gz ]];then
 			rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
         fi
     fi
@@ -224,7 +289,7 @@ function backup_system_dirs {
         if [[ -d "${SYSTEM_DIRS[$DIR]}" ]];then
             BACKUPSYSTEMDIR=$(echo "${SYSTEM_DIRS[$DIR]}"|sed "s/\//_/g")
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" ]];then
-                tar -czf "$BACKUPSYSTEMDIR".tar.gz "${SYSTEM_DIRS[$DIR]}" 2>/dev/null
+                tar -czf "$BACKUPSYSTEMDIR".tar.gz "${SYSTEM_DIRS[$DIR]}" >/dev/null 2>&1
 				rsync -avHP --remove-source-files "$BACKUPSYSTEMDIR".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs >/dev/null 2>&1
 			fi
 		fi
@@ -242,7 +307,7 @@ function backup_system_files {
         if [[ -f "${SYSTEM_FILES[$FILE]}" ]];then
             BACKUPSYSTEMFILE=$(echo "${SYSTEM_FILES[$FILE]}"|sed "s/\//_/g")
 	    if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.tar.gz" ]];then
-			gzip -c "${SYSTEM_FILES[$FILE]}" > "$BACKUPSYSTEMFILE".gz 2>/dev/null
+			gzip -c "${SYSTEM_FILES[$FILE]}" > "$BACKUPSYSTEMFILE".gz >/dev/null 2>&1
 	        rsync -avHP --remove-source-files "$BACKUPSYSTEMFILE".gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
 	    fi
 	fi
@@ -259,8 +324,49 @@ function print_intro {
 	echo "----------------------------------------------------------------"
 }
 
+# cPRBackup Logs
+function cprbackup_logs {
+	if [[ $($SSHRCE "ls -ld $BACKUPDIR/logs 2>/dev/null"|awk '{print $9}') != "$BACKUPDIR/logs" ]];then
+		$SSHRCE "mkdir -p $BACKUPDIR/logs"
+	fi
+}
+
+function time_process () {
+    END_TIME=$(date +%s)
+    TIMES=$(( END_TIME - START_TIME ))
+    if [ ${TIMES} -gt 60 ]; then
+        MINUTES=$(( TIMES / 60 ))
+        SECONDS=$(( TIMES % 60 ))
+        
+		if [[ $MINUTES -le 1 ]];then
+			MINUTES=$(echo "$MINUTES Minute")
+		elif [[ $MINUTES -gt 1 ]];then
+			MINUTES=$(echo "$MINUTES Minutes")
+		fi 
+		
+		if [[ $SECONDS -le 1 ]];then
+			SECONDS=$(echo "$SECONDS Second")
+		elif [[ $SECONDS -gt 1 ]];then
+			SECONDS=$(echo "$SECONDS Seconds")
+		fi
+		
+		echo " Finished in                    : $MINUTES $SECONDS"
+		
+    else
+		if [[ $TIMES -lt 60 ]];then
+			echo " Finished in                    : $TIMES Seconds"
+		else
+			echo " Finished in                    : $TIMES Second"
+		fi
+    fi
+    DATE_TIME=$(date +%Y-%m-%d" "%H:%M:%S)
+    echo " Timestamp                      : $DATE_TIME"
+}
+
+
 clear;
 BACKUPDIR=$(date +%F)
+START_TIME=$(date +%s)
 
 print_intro
 additional_destination_backup
@@ -272,12 +378,19 @@ ssh_private_key
 sftp_username
 authentication_key
 ssh_connection_test
+linestip
 local_backup_config
 additional_backup_status
 total_cpanel_account
 running_process
 
 create_backup_dir
+cprbackup_logs
 cpmove_backup_skip_homedir
 backup_homedir
 backup_system
+
+cpmove_backup_status
+linestip
+time_process
+linestip
