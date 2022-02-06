@@ -15,8 +15,6 @@
 # Private Key: your_ssh_private_key_full_path_file
 # Save and Validate Destination
 # Enable
-clear;
-BACKUPDIR=$(date +%F)
 
 # Backup Running Process
 function running_process {
@@ -161,6 +159,19 @@ function additional_backup_status {
 	fi
 }
 
+# Total cPanel Account
+function total_cpanel_account {
+	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowner|wc -l)
+	if [[ $TOTALCPANELACCOUNT -eq 0 ]];then
+		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Account"
+		exit
+	elif [[ $TOTALCPANELACCOUNT -eq 1 ]];then
+		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Account"
+	elif [[ $TOTALCPANELACCOUNT -ge 2 ]];then
+		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Accounts"
+	fi
+}
+
 # Create Backup Directory
 function create_backup_dir {
     if [[ $($SSHRCE "ls $RBACKUPDIR" 2>/dev/null) != $(date +%F) ]];then
@@ -201,6 +212,7 @@ function backup_system {
 	fi
 	
 }
+
 # Backup System Dirs
 function backup_system_dirs {
 	if [[ $($SSHRCE "ls -ld $BACKUPDIR/system/dirs 2>/dev/null"|awk '{print $9}') != "$BACKUPDIR/system/dirs" ]];then
@@ -247,6 +259,9 @@ function print_intro {
 	echo "..."
 }
 
+clear;
+BACKUPDIR=$(date +%F)
+
 print_intro
 additional_destination_backup
 sftp_type
@@ -259,6 +274,7 @@ authentication_key
 ssh_connection_test
 local_backup_config
 additional_backup_status
+total_cpanel_account
 running_process
 
 create_backup_dir
