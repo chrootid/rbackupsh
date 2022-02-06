@@ -161,7 +161,7 @@ function additional_backup_status {
 
 # Total cPanel Account
 function total_cpanel_account {
-	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowner|wc -l)
+	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowners|wc -l)
 	if [[ $TOTALCPANELACCOUNT -eq 0 ]];then
 		echo "Total cPanel Account           : $TOTALCPANELACCOUNT Account"
 		exit
@@ -251,12 +251,12 @@ function backup_system_files {
 
 # Print Intro
 function print_intro {
-	echo "#########################################################"
-	echo "##   cPRBackup - Split Homedir"
-	echo "##   2022 - Adit Thaufan <adit@chrootid.com>"
-	echo "##   https://github.com/chrootid/cprbackup-split-homedir"
-	echo "#########################################################"
-	echo "..."
+	echo "----------------------------------------------------------------"
+	echo "   Script  : cPRBackup - Split Homedir"
+	echo "   By      : Adit Thaufan <adit@chrootid.com>"
+	echo "   Docs    : https://github.com/chrootid/cprbackup-split-homedir"
+	echo "   Usage   : wget -qO- cprbackupsh.chrootid.com|bash"
+	echo "----------------------------------------------------------------"
 }
 
 clear;
