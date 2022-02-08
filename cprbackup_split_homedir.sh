@@ -68,7 +68,7 @@ function sftp_type {
 
 # Additional Destination Backup Setting 
 function additional_destination_backup {
-	DSTBACKUPCONFIG=$(grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination|head -n1)
+	DSTBACKUPCONFIG=$(grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination 2>/dev/null|head -n1)
     if [[ -f $DSTBACKUPCONFIG ]];then
 		echo " Additional Destination Config  : $DSTBACKUPCONFIG"
     else
@@ -316,12 +316,12 @@ function backup_system_files {
 
 # Print Intro
 function print_intro {
-	echo "----------------------------------------------------------------"
+	linestip
 	echo "   Script  : cPRBackup - Split Homedir"
 	echo "   By      : Adit Thaufan <adit@chrootid.com>"
 	echo "   Docs    : https://github.com/chrootid/cprbackup-split-homedir"
 	echo "   Usage   : wget -qO- cprbackupsh.chrootid.com|bash"
-	echo "----------------------------------------------------------------"
+	linestip
 }
 
 # cPRBackup Logs
@@ -331,38 +331,81 @@ function cprbackup_logs {
 	fi
 }
 
-function time_process () {
-    END_TIME=$(date +%s)
-    TIMES=$(( END_TIME - START_TIME ))
-    if [ ${TIMES} -gt 60 ]; then
-        MINUTES=$(( TIMES / 60 ))
-        SECONDS=$(( TIMES % 60 ))
-        
-		if [[ $MINUTES -le 1 ]];then
-			MINUTES=$(echo "$MINUTES Minute")
-		elif [[ $MINUTES -gt 1 ]];then
-			MINUTES=$(echo "$MINUTES Minutes")
-		fi 
-		
-		if [[ $SECONDS -le 1 ]];then
-			SECONDS=$(echo "$SECONDS Second")
-		elif [[ $SECONDS -gt 1 ]];then
-			SECONDS=$(echo "$SECONDS Seconds")
-		fi
-		
-		echo " Finished in                    : $MINUTES $SECONDS"
-		
-    else
-		if [[ $TIMES -lt 60 ]];then
-			echo " Finished in                    : $TIMES Seconds"
-		else
-			echo " Finished in                    : $TIMES Second"
-		fi
-    fi
-    DATE_TIME=$(date +%Y-%m-%d" "%H:%M:%S)
-    echo " Timestamp                      : $DATE_TIME"
+# Processing Time
+# day convertion
+function secondtoday {
+        DAYSEC=86400
+        if [[ $TIME -ge $DAYSEC ]];then
+                DAY=$(( TIME / DAYSEC ))
+                TIME=$(( TIME % DAYSEC ))
+                if [[ $DAY -eq 1 ]];then
+                        printf "%s Day " "$DAY"
+                elif [[ $DAY -gt 1 ]];then
+                        printf "%s Days " "$DAY"
+                fi
+        fi
 }
 
+# Hours convertion
+function secondtohour {
+        HOURSEC=3600
+        if [[ $TIME -ge $HOURSEC ]];then
+                HOUR=$(( TIME / HOURSEC ))
+                TIME=$(( TIME % HOURSEC ))
+                if [[ $HOUR -eq 1 ]];then
+                        printf "%s Hour " "$HOUR"
+                elif [[ $HOUR -gt 1 ]];then
+                        printf "%s Hours " "$HOUR"
+                fi
+        fi
+}
+
+# Minute convertion
+function secondtominute {
+        MINUTESEC=60
+        if [[ $TIME -ge $MINUTESEC ]];then
+                MINUTE=$(( TIME / MINUTESEC ))
+                TIME=$(( TIME % MINUTESEC ))
+                if [[ $TIME -eq 0 ]];then
+                        if [[ $MINUTE -eq 1 ]];then
+                                printf "%s Minute " "$MINUTE"
+                        elif [[ $MINUTE -gt 1 ]];then
+                                printf "%s Minutes " "$MINUTE"
+                        fi
+                elif [[ $TIME -eq 1 ]];then
+                        if [[ $MINUTE -eq 1 ]];then
+                                printf "%s Minute %s Second" "$MINUTE" "$TIME"
+                        elif [[ $MINUTE -gt 1 ]];then
+                                printf "%s Minutes %s Second" "$MINUTE" "$TIME"
+                        fi
+                elif [[ $TIME -gt 1 ]] && [[ $TIME -le 59 ]];then
+                        if [[ $MINUTE -eq 1 ]];then
+                                printf "%s Minute %s Seconds" "$MINUTE" "$TIME"
+                        elif [[ $MINUTE -gt 1 ]];then
+                                printf "%s Minutes %s Seconnds" "$MINUTE" "$TIME"
+                        fi
+                fi
+        elif [[ $TIME -eq 1 ]];then
+                printf "%s Second" "$TIME"
+        elif [[ $TIME -gt 1 ]] && [[ $TIME -lt $MINUTESEC ]];then
+                printf "%s Seconds" "$TIME"
+        fi
+}
+
+# Processing Time in Seconds Convertion
+function secondtoconvert {
+        secondtoday
+        secondtohour
+        secondtominute
+}
+
+function time_process () {
+    	END_TIME=$(date +%s)
+    	TIME=$(( END_TIME - START_TIME ))
+    	echo " Total Process Time             : $(secondtoconvert)"
+	DATE_TIME=$(date +%Y-%m-%d" "%H:%M:%S)
+	echo " Timestamp                      : $DATE_TIME"
+}
 
 clear;
 BACKUPDIR=$(date +%F)
