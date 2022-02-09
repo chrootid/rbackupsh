@@ -245,6 +245,7 @@ function create_backup_dir {
 
 # cPmove Backup Skip Homedir
 function cpmove_backup_skip_homedir {
+	printf " cPmove Backup                  : Running "
     cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
 	if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" ]];then
 		if [[ ! -f /home/cpmove-$CPUSER.tar.gz ]];then
@@ -254,11 +255,13 @@ function cpmove_backup_skip_homedir {
 			rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
         fi
     fi
+	echo -e "\\r cPmove Backup                  : ${CHECK_MARK} Done       "
     done
 }
 
 # Backup Homedir
 function backup_homedir {
+	printf " cPhomedir Backup               : Running "
     cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
     HOMEDIR=$(grep "$CPUSER" /etc/passwd|cut -d: -f6)
 	if [[ $($SSHRCE "ls $BACKUPDIR/homedir/$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/homedir/$CPUSER.tar.gz" ]];then
@@ -266,14 +269,17 @@ function backup_homedir {
 		$SSHRCE "tar -czf $BACKUPDIR/homedir/$CPUSER.tar.gz $BACKUPDIR/homedir/$CPUSER --remove-files" >/dev/null 2>&1
     fi
     done
+	echo -e "\\r cPhomedir Backup               : ${CHECK_MARK} Done       "
 }
 
 # Backup System
 function backup_system {
 	UPLOADBACKUPSYSTEM=$(awk '/upload_system_backup:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $UPLOADBACKUPSYSTEM -eq 1 ]];then
+	printf " cPsystem Backup                : Running "
 		backup_system_dirs
 		backup_system_files
+	echo -e " \\r cPsystem Backup                : ${CHECK_MARK} Done       "
 	fi
 	
 }
@@ -404,12 +410,13 @@ function time_process () {
     	TIME=$(( END_TIME - START_TIME ))
     	echo " Total Process Time             : $(secondtoconvert)"
 	DATE_TIME=$(date +%Y-%m-%d" "%H:%M:%S)
-	echo " Timestamp                      : $DATE_TIME"
+	echo " Date Time                      : $DATE_TIME"
 }
 
 clear;
 BACKUPDIR=$(date +%F)
 START_TIME=$(date +%s)
+CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 
 print_intro
 additional_destination_backup
