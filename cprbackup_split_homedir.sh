@@ -169,7 +169,7 @@ function ssh_connection_test {
 
 # Additional Backup Status 
 function additional_backup_status {
-	DESTINATIONSTATUS=$(awk '/disabled:/ {print $2}' /var/cpanel/backups/*.backup_destination)
+	DESTINATIONSTATUS=$(awk '/disabled:/ {print $2}' $DSTBACKUPCONFIG)
 	if [[ $DESTINATIONSTATUS -eq 0 ]];then
 		echo " Remote Backup Status           : Enabled"
 	elif [[ $DESTINATIONSTATUS -eq 1 ]];then
