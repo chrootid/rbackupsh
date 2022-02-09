@@ -135,7 +135,7 @@ function sftp_username {
 
 # SSH Connection Test
 function ssh_connection_test {
-	EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0');
+	EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0'; echo $?);
 	if [[ $EXITVALUE -eq 0 ]];then
 		echo " SSH Connection Test            : Successful"
 	elif [[ $EXITVALUE -eq 255 ]];then
@@ -213,7 +213,7 @@ function cpmove_backup_status {
 	done
 	TOTALFAILEDCPMOVE=$($SSHRCE "grep cpmove-*.tar.gz $BACKUPDIR/logs/failed"|wc -l)
 	TOTALCPANELCOMPLETEDCPMOVE=$(( TOTALCPANELACCOUNT - TOTALFAILEDCPMOVE ))
-	echo " cPmove Backup                  : $TOTALCPANELCOMPLETEDCPMOVE Complted, $TOTALFAILEDCPMOVE Failed"
+	echo " Total cPmove Backup            : $TOTALCPANELCOMPLETEDCPMOVE Complted, $TOTALFAILEDCPMOVE Failed"
 	
 	# cPuser Homedir Check
 	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
@@ -223,7 +223,7 @@ function cpmove_backup_status {
 	done
 	TOTALFAILEDCPHOME=$($SSHRCE "grep homedir $BACKUPDIR/logs/failed"|wc -l)
 	TOTALCPANELCOMPLETEDCPHOME=$(( TOTALCPANELACCOUNT - TOTALFAILEDCPHOME ))
-	echo " cPuser Homedir Backup          : $TOTALCPANELCOMPLETEDCPHOME Complted, $TOTALFAILEDCPHOME Failed"
+	echo " Total cPhomedir Backup         : $TOTALCPANELCOMPLETEDCPHOME Complted, $TOTALFAILEDCPHOME Failed"
 	
 	# Total Backup Size
 	if [[ $($SSHRCE "ls -ld $BACKUPDIR 2>/dev/null"|awk '{print $9}') == "$BACKUPDIR" ]];then
