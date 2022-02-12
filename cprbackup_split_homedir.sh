@@ -30,16 +30,15 @@ function running_process {
 }
 
 # Authentication Type
-function authentication_key {
+function authentication_type {
 	AUTHTYPE=$(awk '/authtype:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $AUTHTYPE == "password" ]];then
         	echo " Authentication Type            : Password"
-		linestip
-		echo " NOTE: This script only works for Key Authentication Type"
-		linestip
-		exit
+		ssh_password
+		SSHRCE="$SSHPASS -p $SSHPASSWORD ssh -p $RSSHPORT $USERNAME@$RBACKUP"
 	elif [[ $AUTHTYPE == "key" ]];then
 		echo " Authentication Type            : SSH Key"
+		ssh_private_key
 		SSHRCE="ssh -i $SSHKEY -p $RSSHPORT $USERNAME@$RBACKUP"
 	fi
 }
@@ -102,6 +101,25 @@ function ssh_port {
 		echo " SSH Port                       : $RSSHPORT"
 	else
 		echo " SSH Port                       : $RSSHPORT"
+	fi
+}
+
+# SSH Password
+function ssh_password {
+	SSHPASS=$(awk '/password:/ {print $2}' "$DSTBACKUPCONFIG")
+	if [[ -n $SSHPASSWORD ]];then
+		if [[ -f $(which sshpass) ]];then
+			SSHPASS=$(which sshpass)
+		else
+			yum install -y sshpass >/dev/null 2>&1
+			SSHPASS=$(which sshpass)
+		fi
+		echo " SSH Password                   : $SSHPASSWORD"
+	elif [[ -z $SSHPASSWORD ]];then
+		echo " SSH Password                   : Not Found"
+		linestip
+		echo " NOTE: Please check your SSH Password"
+		linestip
 	fi
 }
 
@@ -437,9 +455,8 @@ sftp_type
 remote_backup_host
 path_dir
 ssh_port
-ssh_private_key
 sftp_username
-authentication_key
+authentication_type
 ssh_connection_test
 linestip
 local_backup_config
