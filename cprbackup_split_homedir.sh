@@ -154,7 +154,7 @@ function sftp_username {
 # SSH Connection Test
 function ssh_connection_test {
 	if [[ $AUTHTYPE == "password" ]];then
-		EXITVALUE=$($SSHPASS -p $SSHPASSWORD -p"$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0';echo $?)
+		EXITVALUE=$($SSHPASS -p $SSHPASSWORD ssh -p"$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0';echo $?)
 	elif [[ $AUTHTYPE == "key" ]];then
 		EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0'; echo $?);
 	fi
