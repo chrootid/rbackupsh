@@ -221,7 +221,7 @@ function cpmove_backup_status {
 
 	# Total Backup Size
 	if [[ $($SSHRCE "ls -ld $BACKUPDIR 2>/dev/null"|awk '{print $9}') == "$BACKUPDIR" ]];then
-		TOTALBACKUPSIZE=$($SSHRCE "du -sh $RBACKUPDIR/$BACKUPDIR")
+		TOTALBACKUPSIZE=$($SSHRCE "du -sh $RBACKUPDIR/$BACKUPDIR" 2>/dev/null)
 	else
 		echo " NOTE: Backup Dir not found"
 		linestip
@@ -334,7 +334,7 @@ function backup_system_files {
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" ]];then
 				rsync -avHP "${SYSTEM_FILES[$FILE]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
 				$SSHRCE "mv $BACKUPDIR/system/files/$BASEFILE $BACKUPDIR/system/files/$BACKUPSYSTEMFILE"
-				$SSHRCE "gzip -c $BACKUPDIR/system/files/$BACKUPSYSTEMFILE > $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" >/dev/null 2>&1
+				$SSHRCE "gzip -9 $BACKUPDIR/system/files/$BACKUPSYSTEMFILE" >/dev/null 2>&1
 			fi
 		fi
 	done
