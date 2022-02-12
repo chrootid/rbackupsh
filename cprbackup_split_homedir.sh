@@ -106,7 +106,7 @@ function ssh_port {
 
 # SSH Password
 function ssh_password {
-	SSHPASS=$(awk '/password:/ {print $2}' "$DSTBACKUPCONFIG")
+	SSHPASSWORD=$(awk '/password:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -n $SSHPASSWORD ]];then
 		if [[ -f $(which sshpass) ]];then
 			SSHPASS=$(which sshpass)
@@ -153,13 +153,17 @@ function sftp_username {
 
 # SSH Connection Test
 function ssh_connection_test {
-	EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0'; echo $?);
+	if [[ $AUTHTYPE == "password" ]];then
+		EXITVALUE=$($SSHPASS -p $SSHPASSWORD -p"$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0';echo $?)
+	elif [[ $AUTHTYPE == "key" ]];then
+		EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0'; echo $?);
+	fi
+
 	if [[ $EXITVALUE -eq 0 ]];then
 		echo " SSH Connection Test            : Successful"
 	else
 		echo " SSH Connection Test            : Connection failed"
 		linestip
-		echo " ssh -i $SSHKEY -p $RSSHPORT $USERNAME@$RBACKUP"
 		echo " NOTE: Please check your SSH Connection settings. SSH Private Key,"
 		echo " SFTP Username, SSH Port, Remote Backup SFTP Server IP/Host."
 		echo " Make sure your SSH Server IP and Port were accepted by firewall."
