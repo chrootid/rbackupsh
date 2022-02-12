@@ -36,12 +36,10 @@ function authentication_type {
         	echo " Authentication Type            : Password"
 		ssh_password
 		SSHRCE="$SSHPASS -p $SSHPASSWORD ssh -p $RSSHPORT $USERNAME@$RBACKUP"
-		SSHRSYNC=$(echo "--rsh='sshpass -p "$SSHPASSWORD" ssh -p "$RSSHPORT"'")
 	elif [[ $AUTHTYPE == "key" ]];then
 		echo " Authentication Type            : SSH Key"
 		ssh_private_key
 		SSHRCE="ssh -i $SSHKEY -p $RSSHPORT $USERNAME@$RBACKUP"
-		SSHRSYNC=$(echo "-e 'ssh -i "$SSHKEY" -p "$RSSHPORT"'")
 	fi
 }
 
@@ -264,18 +262,26 @@ function create_backup_dir {
 }
 
 # cPmove Backup Skip Homedir
+function sshrsync_cpmovebackup {
+	if [[ $AUTHTYPE == "key" ]];then
+		rsync -avHP --remove-source-files /home/cpmove-"$CPUSERBACKUP".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
+	elif [[ $AUTHTYPE == "password" ]];then
+		rsync -avHP --remove-source-files /home/cpmove-"$CPUSERBACKUP".tar.gz --rsh="sshpass -p $SSHPASSWORD ssh -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
+	fi
+}
+
 function do_cpmovebackup {
 	printf " cPmove Backup                  : Running "
-	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
-		printf "\r cPmove Backup                  : Running %s" "$CPUSER"
+	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSERBACKUP;do
+		printf "\r cPmove Backup                  : Running %s" "$CPUSERBACKUP"
 		printf " %0.s" {0..50}
-		printf "\r cPmove Backup                  : Running %s" "$CPUSER"
-		if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" ]];then
-			if [[ ! -f /home/cpmove-$CPUSER.tar.gz ]];then
-				/scripts/pkgacct --skiphomedir "$CPUSER" >/dev/null 2>&1
-				rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz "$SSHRSYNC" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
-			elif [[ -f /home/cpmove-$CPUSER.tar.gz ]];then
-				rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz "$SSHRSYNC" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
+		printf "\r cPmove Backup                  : Running %s" "$CPUSERBACKUP"
+		if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSERBACKUP.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSERBACKUP.tar.gz" ]];then
+			if [[ ! -f /home/cpmove-$CPUSERBACKUP.tar.gz ]];then
+				/scripts/pkgacct --skiphomedir "$CPUSERBACKUP" >/dev/null 2>&1
+				sshrsync_cpmovebackup
+			elif [[ -f /home/cpmove-$CPUSERBACKUP.tar.gz ]];then
+				sshrsync_cpmovebackup
 			fi
 		fi
 	done
@@ -285,6 +291,14 @@ function do_cpmovebackup {
 }
 
 # Backup Homedir
+function sshrsync_cphomedirbackup {
+	if [[ $AUTHTYPE == "password" ]];then
+		rsync -avHP "$HOMEDIR" --rsh="sshpass -p $SSHPASSWORD ssh -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/homedir/ >/dev/null 2>&1
+	elif [[ $AUTHTYPE == "key" ]];then
+		rsync -avHP "$HOMEDIR" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/homedir/ >/dev/null 2>&1
+	fi
+}
+
 function do_cphomedirbackup {
 	printf " cPhomedir Backup               : Running "
 	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
@@ -293,7 +307,7 @@ function do_cphomedirbackup {
 		printf "\r cPhomedir Backup               : Running %s" "$CPUSER"
 		HOMEDIR=$(grep "$CPUSER" /etc/passwd|cut -d: -f6)
 		if [[ $($SSHRCE "ls $BACKUPDIR/homedir/$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/homedir/$CPUSER.tar.gz" ]];then
-			rsync -avHP "$HOMEDIR" "$SSHRSYNC" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/homedir/ >/dev/null 2>&1
+			sshrsync_cphomedirbackup
 			$SSHRCE "tar -czf $BACKUPDIR/homedir/$CPUSER.tar.gz -C $BACKUPDIR/homedir/ $CPUSER --remove-files" >/dev/null 2>&1
 		fi
 	done
@@ -317,6 +331,14 @@ function do_cpsystembackup {
 }
 
 # Backup System Dirs
+function sshrsync_cpsystembackupdirs {
+        if [[ $AUTHTYPE == "password" ]];then
+		rsync -avHP "${SYSTEM_DIRS[$DIR]}" --rsh="sshpass -p $SSHPASSWORD ssh -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
+        elif [[ $AUTHTYPE == "key" ]];then
+		rsync -avHP "${SYSTEM_DIRS[$DIR]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
+        fi
+}
+
 function backup_system_dirs {
 	if [[ $($SSHRCE "ls -ld $BACKUPDIR/system/dirs 2>/dev/null"|awk '{print $9}') != "$BACKUPDIR/system/dirs" ]];then
 		$SSHRCE "mkdir -p $BACKUPDIR/system/dirs"
@@ -334,7 +356,7 @@ function backup_system_dirs {
 			BASEDIR=$(echo "${SYSTEM_DIRS[$DIR]}"|awk -F'/' '{print $2}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" ]];then
 				$SSHRCE "mkdir -p $BACKUPDIR/system/dirs$DIRNAME"
-				rsync -avHP "${SYSTEM_DIRS[$DIR]}" "$SSHRSYNC" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
+				sshrsync_cpsystembackupdirs
 				$SSHRCE "tar -czf $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz -C $BACKUPDIR/system/dirs $BASEDIR --remove-files" >/dev/null 2>&1
 			fi
 		fi
@@ -342,6 +364,14 @@ function backup_system_dirs {
 }
 
 # Backup System Files
+function sshrsync_cpsystembackupfiles {
+        if [[ $AUTHTYPE == "password" ]];then
+		rsync -avHP "${SYSTEM_FILES[$FILE]}" --rsh="sshpass -p $SSHPASSWORD ssh -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
+        elif [[ $AUTHTYPE == "key" ]];then
+		rsync -avHP "${SYSTEM_FILES[$FILE]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
+        fi
+}
+
 function backup_system_files {
 	if [[ $($SSHRCE "ls -ld $BACKUPDIR/system/files 2>/dev/null"|awk '{print $9}') != "$BACKUPDIR/system/files" ]];then
 		$SSHRCE "mkdir -p $BACKUPDIR/system/files"
@@ -357,7 +387,7 @@ function backup_system_files {
 			BACKUPSYSTEMFILE=$(echo "${SYSTEM_FILES[$FILE]}"|sed "s/\//_/g")
 			BASEFILE=$(echo "${SYSTEM_FILES[$FILE]}"|awk -F'/' '{print $NF}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" ]];then
-				rsync -avHP "${SYSTEM_FILES[$FILE]}" "$SSHRSYNC" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
+				sshrsync_cpsystembackupfiles
 				$SSHRCE "mv $BACKUPDIR/system/files/$BASEFILE $BACKUPDIR/system/files/$BACKUPSYSTEMFILE"
 				$SSHRCE "gzip -9 $BACKUPDIR/system/files/$BACKUPSYSTEMFILE" >/dev/null 2>&1
 			fi
