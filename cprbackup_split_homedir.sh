@@ -310,7 +310,7 @@ function backup_system_dirs {
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" ]];then
 				$SSHRCE "mkdir -p $BACKUPDIR/system/dirs$DIRNAME"
 				rsync -avHP "${SYSTEM_DIRS[$DIR]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
-				$SSHRCE "tar -czf $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz -C $BACKUPDIR/system/dirs /$BASEDIR --remove-files" >/dev/null 2>&1
+				$SSHRCE "tar -czf $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz -C $BACKUPDIR/system/dirs $BASEDIR --remove-files" >/dev/null 2>&1
 			fi
 		fi
 	done
