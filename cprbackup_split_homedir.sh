@@ -36,10 +36,12 @@ function authentication_type {
         	echo " Authentication Type            : Password"
 		ssh_password
 		SSHRCE="$SSHPASS -p $SSHPASSWORD ssh -p $RSSHPORT $USERNAME@$RBACKUP"
+		SSHRSYNC=$(echo "--rsh='sshpass -p "$SSHPASSWORD" ssh -p "$RSSHPORT"'")
 	elif [[ $AUTHTYPE == "key" ]];then
 		echo " Authentication Type            : SSH Key"
 		ssh_private_key
 		SSHRCE="ssh -i $SSHKEY -p $RSSHPORT $USERNAME@$RBACKUP"
+		SSHRSYNC=$(echo "-e 'ssh -i "$SSHKEY" -p "$RSSHPORT"'")
 	fi
 }
 
@@ -107,8 +109,9 @@ function ssh_port {
 # SSH Password
 function ssh_password {
 	SSHPASSWORD=$(awk '/password:/ {print $2}' "$DSTBACKUPCONFIG")
+	SSHPASS=$(which sshpass 2>/dev/null)
 	if [[ -n $SSHPASSWORD ]];then
-		if [[ -f $(which sshpass) ]];then
+		if [[ -f $SSHPASS ]];then
 			SSHPASS=$(which sshpass)
 		else
 			yum install -y sshpass >/dev/null 2>&1
@@ -154,7 +157,7 @@ function sftp_username {
 # SSH Connection Test
 function ssh_connection_test {
 	if [[ $AUTHTYPE == "password" ]];then
-		EXITVALUE=$($SSHPASS -p $SSHPASSWORD ssh -p"$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0';echo $?)
+		EXITVALUE=$($SSHPASS -p "$SSHPASSWORD" ssh -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0';echo $?)
 	elif [[ $AUTHTYPE == "key" ]];then
 		EXITVALUE=$(ssh -i "$SSHKEY" -q -o BatchMode=yes  -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0'; echo $?);
 	fi
@@ -164,7 +167,7 @@ function ssh_connection_test {
 	else
 		echo " SSH Connection Test            : Connection failed"
 		linestip
-		echo " NOTE: Please check your SSH Connection settings. SSH Private Key,"
+		echo " NOTE: Please check your SSH Connection settings. SSH Private Key or SSH Password,"
 		echo " SFTP Username, SSH Port, Remote Backup SFTP Server IP/Host."
 		echo " Make sure your SSH Server IP and Port were accepted by firewall."
 		linestip
@@ -270,9 +273,9 @@ function do_cpmovebackup {
 		if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" ]];then
 			if [[ ! -f /home/cpmove-$CPUSER.tar.gz ]];then
 				/scripts/pkgacct --skiphomedir "$CPUSER" >/dev/null 2>&1
-				rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
+				rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz "$SSHRSYNC" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
 			elif [[ -f /home/cpmove-$CPUSER.tar.gz ]];then
-				rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
+				rsync -avHP --remove-source-files /home/cpmove-"$CPUSER".tar.gz "$SSHRSYNC" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/accounts >/dev/null 2>&1
 			fi
 		fi
 	done
@@ -290,7 +293,7 @@ function do_cphomedirbackup {
 		printf "\r cPhomedir Backup               : Running %s" "$CPUSER"
 		HOMEDIR=$(grep "$CPUSER" /etc/passwd|cut -d: -f6)
 		if [[ $($SSHRCE "ls $BACKUPDIR/homedir/$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/homedir/$CPUSER.tar.gz" ]];then
-			rsync -avHP "$HOMEDIR" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/homedir/ >/dev/null 2>&1
+			rsync -avHP "$HOMEDIR" "$SSHRSYNC" "$USERNAME"@"$RBACKUP":"$RBACKUPDIR"/"$BACKUPDIR"/homedir/ >/dev/null 2>&1
 			$SSHRCE "tar -czf $BACKUPDIR/homedir/$CPUSER.tar.gz -C $BACKUPDIR/homedir/ $CPUSER --remove-files" >/dev/null 2>&1
 		fi
 	done
@@ -331,7 +334,7 @@ function backup_system_dirs {
 			BASEDIR=$(echo "${SYSTEM_DIRS[$DIR]}"|awk -F'/' '{print $2}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" ]];then
 				$SSHRCE "mkdir -p $BACKUPDIR/system/dirs$DIRNAME"
-				rsync -avHP "${SYSTEM_DIRS[$DIR]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
+				rsync -avHP "${SYSTEM_DIRS[$DIR]}" "$SSHRSYNC" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
 				$SSHRCE "tar -czf $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz -C $BACKUPDIR/system/dirs $BASEDIR --remove-files" >/dev/null 2>&1
 			fi
 		fi
@@ -354,7 +357,7 @@ function backup_system_files {
 			BACKUPSYSTEMFILE=$(echo "${SYSTEM_FILES[$FILE]}"|sed "s/\//_/g")
 			BASEFILE=$(echo "${SYSTEM_FILES[$FILE]}"|awk -F'/' '{print $NF}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" ]];then
-				rsync -avHP "${SYSTEM_FILES[$FILE]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
+				rsync -avHP "${SYSTEM_FILES[$FILE]}" "$SSHRSYNC" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
 				$SSHRCE "mv $BACKUPDIR/system/files/$BASEFILE $BACKUPDIR/system/files/$BACKUPSYSTEMFILE"
 				$SSHRCE "gzip -9 $BACKUPDIR/system/files/$BACKUPSYSTEMFILE" >/dev/null 2>&1
 			fi
