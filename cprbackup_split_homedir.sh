@@ -209,7 +209,7 @@ function cpmove_backup_status {
 	TOTALCPANELCOMPLETEDCPMOVE=$(( TOTALCPANELACCOUNT - TOTALFAILEDCPMOVE ))
 	echo " Total cPmove Backup            : $TOTALCPANELCOMPLETEDCPMOVE Complted, $TOTALFAILEDCPMOVE Failed"
 
-	# cPuser Homedir Check
+	# cPhomedir Backup Check
 	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
 		if [[ $($SSHRCE "ls -ld $BACKUPDIR/homedir/$CPUSER 2>/dev/null"|awk '{print $9}') == "$BACKUPDIR/homedir/$CPUSER" ]];then
 			$SSHRCE "echo "failed: "$CPUSER" homedir" >> $BACKUPDIR/logs/failed" 2>/dev/null
@@ -281,12 +281,12 @@ function do_cphomedirbackup {
 function do_cpsystembackup {
 	UPLOADBACKUPSYSTEM=$(awk '/upload_system_backup:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $UPLOADBACKUPSYSTEM -eq 1 ]];then
-	printf " cPsystem Backup                : Running "
+		printf " cPsystem Backup                : Running "
 		backup_system_dirs
 		backup_system_files
-	echo -ne " \r cPsystem Backup                : ${CHECK_MARK} Done"
-	printf " %0.s" {0..50}
-	printf "\n"
+		echo -ne " \r cPsystem Backup                : ${CHECK_MARK} Done"
+		printf " %0.s" {0..50}
+		printf "\n"
 	fi
 
 }
@@ -297,7 +297,7 @@ function backup_system_dirs {
 		$SSHRCE "mkdir -p $BACKUPDIR/system/dirs"
 	fi
 
-	SYSTEM_DIRS=(/etc/cpanel /etc/mail /etc/pki/tls/certs /etc/proftpd /etc/ssl /etc/valiases /etc/vdomainaliases /etc/vfilters /usr/local/cpanel/3rdparty/mailman /var/cpanel /var/lib/mysql/ /var/lib/rpm /var/named /var/spool/cron)
+	SYSTEM_DIRS=(/etc/cpanel /etc/mail /etc/pki/tls/certs /etc/proftpd /etc/ssl /etc/valiases /etc/vdomainaliases /etc/vfilters /usr/local/cpanel/3rdparty/mailman /var/cpanel /var/lib/mysql /var/lib/rpm /var/named /var/spool/cron)
 
 	for DIR in "${!SYSTEM_DIRS[@]}";do
 		printf "\r cPsystem Backup                : Running %s" "${SYSTEM_DIRS[$DIR]}"
@@ -305,9 +305,12 @@ function backup_system_dirs {
 		printf "\r cPsystem Backup                : Running %s" "${SYSTEM_DIRS[$DIR]}"
 		if [[ -d "${SYSTEM_DIRS[$DIR]}" ]];then
 			BACKUPSYSTEMDIR=$(echo "${SYSTEM_DIRS[$DIR]}"|sed "s/\//_/g")
+			DIRNAME=$(dirname "${SYSTEM_DIRS[$DIR]}")
+			BASEDIR=$(echo "${SYSTEM_DIRS[$DIR]}"|awk -F'/' '{print $2}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" ]];then
-				tar -czf "$BACKUPSYSTEMDIR".tar.gz "${SYSTEM_DIRS[$DIR]}" >/dev/null 2>&1
-				rsync -avHP --remove-source-files "$BACKUPSYSTEMDIR".tar.gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs >/dev/null 2>&1
+				$SSHRCE "mkdir -p $BACKUPDIR/system/dirs$DIRNAME"
+				rsync -avHP "${SYSTEM_DIRS[$DIR]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME"
+				$SSHRCE "tar -czf $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz $BACKUPDIR/system/dirs/$BASEDIR --remove-files" >/dev/null 2>&1
 			fi
 		fi
 	done
@@ -327,9 +330,11 @@ function backup_system_files {
                 printf "\r cPsystem Backup                : Running %s" "${SYSTEM_FILES[$FILE]}"
 		if [[ -f "${SYSTEM_FILES[$FILE]}" ]];then
 			BACKUPSYSTEMFILE=$(echo "${SYSTEM_FILES[$FILE]}"|sed "s/\//_/g")
-			if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.tar.gz" ]];then
-				gzip -c "${SYSTEM_FILES[$FILE]}" > "$BACKUPSYSTEMFILE".gz >/dev/null 2>&1
-				rsync -avHP --remove-source-files "$BACKUPSYSTEMFILE".gz -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
+			BASEFILE=$(echo "${SYSTEM_FILES[$FILE]}"|awk -F'/' '{print $NF}')
+			if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" ]];then
+				rsync -avHP "${SYSTEM_FILES[$FILE]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files
+				$SSHRCE "mv $BACKUPDIR/system/files/$BASEFILE $BACKUPDIR/system/files/$BACKUPSYSTEMFILE"
+				$SSHRCE "gzip -c $BACKUPDIR/system/files/$BACKUPSYSTEMFILE > $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" >/dev/null 2>&1
 			fi
 		fi
 	done
