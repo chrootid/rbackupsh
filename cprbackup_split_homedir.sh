@@ -309,7 +309,7 @@ function backup_system_dirs {
 			BASEDIR=$(echo "${SYSTEM_DIRS[$DIR]}"|awk -F'/' '{print $2}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" 2>/dev/null) != "$BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz" ]];then
 				$SSHRCE "mkdir -p $BACKUPDIR/system/dirs$DIRNAME"
-				rsync -avHP "${SYSTEM_DIRS[$DIR]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME"
+				rsync -avHP "${SYSTEM_DIRS[$DIR]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/dirs"$DIRNAME" >/dev/null 2>&1
 				$SSHRCE "tar -czf $BACKUPDIR/system/dirs/$BACKUPSYSTEMDIR.tar.gz $BACKUPDIR/system/dirs/$BASEDIR --remove-files" >/dev/null 2>&1
 			fi
 		fi
@@ -332,7 +332,7 @@ function backup_system_files {
 			BACKUPSYSTEMFILE=$(echo "${SYSTEM_FILES[$FILE]}"|sed "s/\//_/g")
 			BASEFILE=$(echo "${SYSTEM_FILES[$FILE]}"|awk -F'/' '{print $NF}')
 			if [[ $($SSHRCE "ls $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" 2>/dev/null) != "$BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" ]];then
-				rsync -avHP "${SYSTEM_FILES[$FILE]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files
+				rsync -avHP "${SYSTEM_FILES[$FILE]}" -e "ssh -i $SSHKEY -p $RSSHPORT" "$USERNAME"@"$RBACKUP":$RBACKUPDIR/"$BACKUPDIR"/system/files >/dev/null 2>&1
 				$SSHRCE "mv $BACKUPDIR/system/files/$BASEFILE $BACKUPDIR/system/files/$BACKUPSYSTEMFILE"
 				$SSHRCE "gzip -c $BACKUPDIR/system/files/$BACKUPSYSTEMFILE > $BACKUPDIR/system/files/$BACKUPSYSTEMFILE.gz" >/dev/null 2>&1
 			fi
