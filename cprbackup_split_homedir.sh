@@ -5,7 +5,7 @@
 
 # SFTP Remote Backup Setting
 # WHM -> Backup -> Backup Configuration -> Additional Destinations -> Destination Type: SFTP -> Create New Destination
- 
+
 # Destination Name: cpanel remote backup split homedir
 # Backup Directory: your_sftp_default_userdir
 # Remote Host: your_remote_backup_sftp_server_ip
@@ -481,32 +481,51 @@ function time_process () {
 	echo " Date Time                      : $DATE_TIME"
 }
 
+# WHM Additional Destination Backup Setting 
+function whm_additional_destination_backup {
+	grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination 2>/dev/null|while read -r DSTBACKUPCONFIG;do
+	        if [[ -f $DSTBACKUPCONFIG ]];then
+	                echo " Additional Destination Config  : $DSTBACKUPCONFIG"
+			echo " Additional Backup Name         : $(awk '/name:/ {print $2}' "$DSTBACKUPCONFIG")"
+			sftp_type
+			remote_backup_host
+			path_dir
+			ssh_port
+			sftp_username
+			authentication_type
+			ssh_connection_test
+			linestip
+			local_backup_config
+			additional_backup_status
+			total_cpanel_account
+			running_process
+
+			create_backup_dir
+			do_cpmovebackup
+			do_cphomedirbackup
+			do_cpsystembackup
+
+			cpmove_backup_status
+			linestip
+			time_process
+			linestip
+        	else
+	                echo " Additional Destination Config  : Not Found"
+                	linestip
+        	        echo " NOTE: There is no active additional destinations backup setting "
+	                echo " in WHM Backup. Please enable it from WHM -> Backup -> Backup "
+                	echo " Configuration -> Additional Destinations -> Destination Type: "
+                	echo " SFTP -> Create New Destination"
+                	linestip
+                	exit
+        	fi
+	done
+}
+
 clear;
 BACKUPDIR=$(date +%F)
 START_TIME=$(date +%s)
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 
 print_intro
-additional_destination_backup
-sftp_type
-remote_backup_host
-path_dir
-ssh_port
-sftp_username
-authentication_type
-ssh_connection_test
-linestip
-local_backup_config
-additional_backup_status
-total_cpanel_account
-running_process
-
-create_backup_dir
-do_cpmovebackup
-do_cphomedirbackup
-do_cpsystembackup
-
-cpmove_backup_status
-linestip
-time_process
-linestip
+whm_additional_destination_backup
