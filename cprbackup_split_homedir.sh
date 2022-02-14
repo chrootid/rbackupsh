@@ -31,7 +31,7 @@ function running_process {
 
 # Authentication Type
 function authentication_type {
-	AUTHTYPE=$(awk '/authtype:/ {print $2}' "$DSTBACKUPCONFIG")
+	AUTHTYPE=$(awk '/^authtype:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $AUTHTYPE == "password" ]];then
         	echo " Authentication Type            : Password"
 		ssh_password
@@ -45,7 +45,7 @@ function authentication_type {
 
 # Remote Backup Host
 function remote_backup_host {
-	RBACKUP=$(awk '/host:/ {print $2}' "$DSTBACKUPCONFIG")
+	RBACKUP=$(awk '/^host:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -n $RBACKUP ]];then
 		echo " Remote Backup Host             : $RBACKUP"
 	fi
@@ -53,7 +53,7 @@ function remote_backup_host {
 
 # SFTP Additional Destination Backup Type
 function sftp_type {
-	TYPE=$(grep -w "type:" "$DSTBACKUPCONFIG"|awk '{print $2}')
+	TYPE=$(awk '/^type:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $TYPE == "SFTP" ]];then
 		echo " Backup Type                    : $TYPE"
 	else
@@ -67,7 +67,7 @@ function sftp_type {
 
 # Path Directory
 function path_dir {
-	RBACKUPDIR=$(awk '/path:/ {print $2}' "$DSTBACKUPCONFIG"|sed "s/'//g")
+	RBACKUPDIR=$(awk '/^path:/ {print $2}' "$DSTBACKUPCONFIG"|sed "s/'//g")
 	if [[ -z $RBACKUPDIR ]];then
 		RBACKUPDIR="~"
 		echo " Path Directory                 : $RBACKUPDIR"
@@ -78,7 +78,7 @@ function path_dir {
 
 # SSH Port
 function ssh_port {
-	RSSHPORT=$(awk '/port:/ {print $2}' "$DSTBACKUPCONFIG")
+	RSSHPORT=$(awk '/^port:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -z $RSSHPORT ]];then
 		RSSHPORT="22"
 		echo " SSH Port                       : $RSSHPORT"
@@ -89,7 +89,7 @@ function ssh_port {
 
 # SSH Password
 function ssh_password {
-	SSHPASSWORD=$(awk '/password:/ {print $2}' "$DSTBACKUPCONFIG")
+	SSHPASSWORD=$(awk '/^password:/ {print $2}' "$DSTBACKUPCONFIG")
 	SSHPASS=$(which sshpass 2>/dev/null)
 	if [[ -n $SSHPASSWORD ]];then
 		if [[ -f $SSHPASS ]];then
@@ -109,7 +109,7 @@ function ssh_password {
 
 # SSH Private Key
 function ssh_private_key {
-	SSHKEY=$(awk '/privatekey:/ {print $2}' "$DSTBACKUPCONFIG")
+	SSHKEY=$(awk '/^privatekey:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -f $SSHKEY ]];then
 		echo " SSH Private Key                : $SSHKEY"
 	else
@@ -123,7 +123,7 @@ function ssh_private_key {
 
 # SFTP Username
 function sftp_username {
-	USERNAME=$(awk '/username:/ {print $2}' "$DSTBACKUPCONFIG")
+	USERNAME=$(awk '/^username:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ -n $USERNAME ]];then
 		echo " Username                       : $USERNAME"
 	elif [[ -z $USERNAME ]];then
@@ -158,7 +158,7 @@ function ssh_connection_test {
 
 # Local Backup Config
 	function local_backup_config {
-	LOCALBACKUP=$(awk '/BACKUPENABLE:/ {print $2}' /var/cpanel/backups/config|sed "s/'//g")
+	LOCALBACKUP=$(awk '/^BACKUPENABLE:/ {print $2}' /var/cpanel/backups/config|sed "s/'//g")
 	if [[ $LOCALBACKUP == "yes" ]];then
 		echo " Local Backup Status            : Enabled"
 		linestip
@@ -172,7 +172,7 @@ function ssh_connection_test {
 
 # Additional Backup Status 
 function additional_backup_status {
-	DESTINATIONSTATUS=$(awk '/disabled:/ {print $2}' "$DSTBACKUPCONFIG")
+	DESTINATIONSTATUS=$(awk '/^disabled:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $DESTINATIONSTATUS -eq 0 ]];then
 		echo " Remote Backup Status           : Enabled"
 	elif [[ $DESTINATIONSTATUS -eq 1 ]];then
@@ -301,7 +301,7 @@ function do_cphomedirbackup {
 
 # Backup System
 function do_cpsystembackup {
-	UPLOADBACKUPSYSTEM=$(awk '/upload_system_backup:/ {print $2}' "$DSTBACKUPCONFIG")
+	UPLOADBACKUPSYSTEM=$(awk '/^upload_system_backup:/ {print $2}' "$DSTBACKUPCONFIG")
 	if [[ $UPLOADBACKUPSYSTEM -eq 1 ]];then
 		printf " cPsystem Backup                : Running "
 		backup_system_dirs
@@ -469,7 +469,7 @@ function whm_additional_destination_backup {
 	grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination 2>/dev/null|while read -r DSTBACKUPCONFIG;do
 	        if [[ -f $DSTBACKUPCONFIG ]];then
 	                echo " Additional Destination Config  : $DSTBACKUPCONFIG"
-			echo " Additional Backup Name         : $(awk '/name:/ {print $2}' "$DSTBACKUPCONFIG")"
+			echo " Additional Backup Name         : $(awk '/^name:/ {print $2}' "$DSTBACKUPCONFIG")"
 			sftp_type
 			remote_backup_host
 			path_dir
