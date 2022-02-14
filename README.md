@@ -2,19 +2,29 @@
 RBackup SH is a very suitable bash script for servers that do not have enough free space to store backup data in their local disk space.
 
 1. Create cPanel/WHM Additional Destination Backup
-WHM -> Backup -> Backup Configuration -> Additional Destinations -> Destination Type: SFTP -> Create New Destination
+<br />WHM -> Backup -> Backup Configuration -> Additional Destinations -> Destination Type: SFTP -> Create New Destination
 
-Destination Name: your_backup_destination_name
-Backup Directory: your_backup_default_dir
-Remote Host: your_remote_backup_server_ip_host
-Port: your_remote_port
-Remote Account Username: your_account_username
-Authentication Type: Key Authentication / Password Authentication
-Password: your_password_if_password_auth
-Private Key: your_ssh_private_key_full_path_file_if_keyauth
-Save and Validate Destination
-Enable
+Destination Name: your_backup_destination_name <br />
+Backup Directory: your_backup_default_dir <br />
+Remote Host: your_remote_backup_server_ip_host <br />
+Port: your_remote_port <br />
+Remote Account Username: your_account_username <br />
+Authentication Type: Key Authentication / Password Authentication <br />
+Password: your_password_if_password_auth <br />
+Private Key: your_ssh_private_key_full_path_file_if_keyauth <br />
+Save and Validate Destination <br />
+Enable it <br />
 
+For Example: <br /> 
+ Destination Name               : server_remote_backup_01 <br />
+ Backup Type                    : SFTP <br /> 
+ Remote Host                    : rbackup.chrootid.com <br /> 
+ Backup Directory               : leave blank or relative path <br /> 
+ Port                           : 6789 <br /> 
+ Remote Account Username        : vm1 <br /> 
+ Authentication Type            : Key Authentication <br /> 
+ Private Key                    : /root/.ssh/vm1_to_rbackup_id_rsa <br /> 
+ 
 2. Download the script
 ```
 # wget -qc rbackupsh.chrootid.com -O /usr/bin/rbackupsh
