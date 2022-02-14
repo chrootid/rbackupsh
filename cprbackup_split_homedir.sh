@@ -65,23 +65,6 @@ function sftp_type {
 	fi
 }
 
-# Additional Destination Backup Setting 
-function additional_destination_backup {
-	DSTBACKUPCONFIG=$(grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination 2>/dev/null|head -n1)
-	if [[ -f $DSTBACKUPCONFIG ]];then
-		echo " Additional Destination Config  : $DSTBACKUPCONFIG"
-	else
-		echo " Additional Destination Config  : Not Found"
-		linestip
-		echo " NOTE: There is no active additional destinations backup setting "
-		echo " in WHM Backup. Please enable it from WHM -> Backup -> Backup "
-		echo " Configuration -> Additional Destinations -> Destination Type: "
-		echo " SFTP -> Create New Destination"
-		linestip
-		exit
-	fi
-}
-
 # Path Directory
 function path_dir {
 	RBACKUPDIR=$(awk '/path:/ {print $2}' "$DSTBACKUPCONFIG"|sed "s/'//g")
@@ -508,6 +491,8 @@ function whm_additional_destination_backup {
 			cpmove_backup_status
 			linestip
 			time_process
+			linestip
+			printf "\n"
 			linestip
         	else
 	                echo " Additional Destination Config  : Not Found"
