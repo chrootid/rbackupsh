@@ -10,7 +10,7 @@
 # Backup Directory: your_sftp_default_userdir
 # Remote Host: your_remote_backup_sftp_server_ip
 # Port: your_remote_backup_ssh_port
-# Remote Account Username: your_sftp_username
+# Remote Account Username: your_cpwhm_username
 # Authentication Type: Key Authentication
 # Private Key: your_ssh_private_key_full_path_file
 # Save and Validate Destination
@@ -30,8 +30,8 @@ function running_process {
 }
 
 # Authentication Type
-function authentication_type {
-	AUTHTYPE=$(awk '/^authtype:/ {print $2}' "$DSTBACKUPCONFIG")
+function cpwhm_authtype {
+	AUTHTYPE=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "authtype:"|awk '{print $2}')
 	if [[ $AUTHTYPE == "password" ]];then
         	echo " Authentication Type            : Password Authentication"
 		ssh_password
@@ -44,16 +44,16 @@ function authentication_type {
 }
 
 # Remote Host
-function remote_host {
-	RBACKUP=$(awk '/^host:/ {print $2}' "$DSTBACKUPCONFIG")
+function cpwhm_host {
+	RBACKUP=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "host:"|awk '{print $2}')
 	if [[ -n $RBACKUP ]];then
 		echo " Remote Host                    : $RBACKUP"
 	fi
 }
 
 # SFTP Additional Destination Backup Type
-function sftp_type {
-	TYPE=$(awk '/^type:/ {print $2}' "$DSTBACKUPCONFIG")
+function cpwhm_type {
+	TYPE=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "type:"|awk '{print $2}')
 	if [[ $TYPE == "SFTP" ]];then
 		echo " Backup Type                    : $TYPE"
 	else
@@ -66,8 +66,8 @@ function sftp_type {
 }
 
 # Backup Directory
-function path_dir {
-	RBACKUPDIR=$(awk '/^path:/ {print $2}' "$DSTBACKUPCONFIG"|sed "s/'//g")
+function cpwhm_path {
+	RBACKUPDIR=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "path:"|awk '{print $2}'|sed "s/'//g")
 	if [[ -z $RBACKUPDIR ]];then
 		RBACKUPDIR="~"
 		echo " Backup Directory               : $RBACKUPDIR"
@@ -77,8 +77,8 @@ function path_dir {
 }
 
 # Port
-function ssh_port {
-	RSSHPORT=$(awk '/^port:/ {print $2}' "$DSTBACKUPCONFIG")
+function cpwhm_port {
+	RSSHPORT=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "port:"|awk '{print $2}')
 	if [[ -z $RSSHPORT ]];then
 		RSSHPORT="22"
 		echo " Port                           : $RSSHPORT"
@@ -89,7 +89,7 @@ function ssh_port {
 
 # SSH Password
 function ssh_password {
-	SSHPASSWORD=$(awk '/^password:/ {print $2}' "$DSTBACKUPCONFIG")
+	SSHPASSWORD=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "password:"|awk '{print $2}')
 	SSHPASS=$(which sshpass 2>/dev/null)
 	if [[ -n $SSHPASSWORD ]];then
 		if [[ -f $SSHPASS ]];then
@@ -109,7 +109,7 @@ function ssh_password {
 
 # SSH Private Key
 function ssh_private_key {
-	SSHKEY=$(awk '/^privatekey:/ {print $2}' "$DSTBACKUPCONFIG")
+	SSHKEY=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "privatekey:"|awk '{print $2}')
 	if [[ -f $SSHKEY ]];then
 		echo " Private Key                    : $SSHKEY"
 	else
@@ -122,8 +122,8 @@ function ssh_private_key {
 }
 
 # SFTP Username
-function sftp_username {
-	USERNAME=$(awk '/^username:/ {print $2}' "$DSTBACKUPCONFIG")
+function cpwhm_username {
+	USERNAME=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "username:"|awk '{print $2}')
 	if [[ -n $USERNAME ]];then
 		echo " Remote Account Username        : $USERNAME"
 	elif [[ -z $USERNAME ]];then
@@ -135,8 +135,21 @@ function sftp_username {
 	fi
 }
 
+# Validate Destination
+function cpwhm_validate {
+	VALIDATESTATUS=$(whmapi1 backup_destination_validate id="$DSTBACKUPID" disableonfail=0|grep -w reason:""|awk '{print $2}')
+	if [[ $VALIDATESTATUS == "OK" ]];then
+		echo " Validate Destination           : Succeeded"
+	else
+		echo " Validate Destination           : Failed"
+		linerstrip
+		echo " NOTE: Please recheck your Additional Backup Setting"
+		linerstrip
+	fi
+}
+
 # SSH Connection Test
-function ssh_connection_test {
+function cpwhm_connection_test {
 	if [[ $AUTHTYPE == "password" ]];then
 		EXITVALUE=$($SSHPASS -p "$SSHPASSWORD" ssh -p "$RSSHPORT" "$USERNAME"@"$RBACKUP" 'exit 0';echo $?)
 	elif [[ $AUTHTYPE == "key" ]];then
@@ -157,22 +170,18 @@ function ssh_connection_test {
 }
 
 # Local Backup Config
-	function local_backup_config {
+	function cpwhm_local_backup_config {
 	LOCALBACKUP=$(awk '/^BACKUPENABLE:/ {print $2}' /var/cpanel/backups/config|sed "s/'//g")
 	if [[ $LOCALBACKUP == "yes" ]];then
-		echo " Local Backup Status            : Enabled"
-		linerstrip
-		echo " NOTE: It should be disabled to prevent local disk usage full"
-		linerstrip
-		exit
+		echo " Local Backup Status            : Enabled. NOTE: It should be disabled to prevent local disk usage full"
 	elif [[ $LOCALBACKUP == "no" ]];then
 		echo " Local Backup Status            : Disabled"
 	fi
 }
 
 # Additional Backup Status 
-function additional_backup_status {
-	DESTINATIONSTATUS=$(awk '/^disabled:/ {print $2}' "$DSTBACKUPCONFIG")
+function cpwhm_disabled {
+	DESTINATIONSTATUS=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "disabled:"|awk '{print $2}')
 	if [[ $DESTINATIONSTATUS -eq 0 ]];then
 		echo " Remote Backup Status           : Enabled"
 	elif [[ $DESTINATIONSTATUS -eq 1 ]];then
@@ -187,7 +196,7 @@ function additional_backup_status {
 }
 
 # Total cPanel Account
-function total_cpanel_account {
+function cpwhm_total_cpaccount {
 	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowners|wc -l)
 	if [[ $TOTALCPANELACCOUNT -eq 0 ]];then
 		echo " Total cPanel Account           : $TOTALCPANELACCOUNT Account"
@@ -203,7 +212,7 @@ function total_cpanel_account {
 }
 
 # cPmove Backup Status
-function cpmove_backup_status {
+function cpwhm_backup_status {
 	$SSHRCE "echo > $BACKUPDIR/logs/failed" 2>/dev/null
 	# cPmove Backup Check
 	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
@@ -236,7 +245,7 @@ function cpmove_backup_status {
 }
 
 # Create Backup Directory
-function create_backup_dir {
+function cpwhm_create_backup_dir {
 	if [[ $($SSHRCE "ls $RBACKUPDIR" 2>/dev/null) != "$BACKUPDIR" ]];then
 		$SSHRCE "mkdir -p $BACKUPDIR/accounts";
 		$SSHRCE "mkdir -p $BACKUPDIR/homedir";
@@ -301,7 +310,7 @@ function do_cphomedirbackup {
 
 # Backup System
 function do_cpsystembackup {
-	UPLOADBACKUPSYSTEM=$(awk '/^upload_system_backup:/ {print $2}' "$DSTBACKUPCONFIG")
+	UPLOADBACKUPSYSTEM=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "upload_system_backup:"|awk '{print $2}')
 	if [[ $UPLOADBACKUPSYSTEM -eq 1 ]];then
 		printf " cPsystem Backup                : Running "
 		backup_system_dirs
@@ -464,45 +473,46 @@ function time_process () {
 }
 
 # WHM Additional Destination Backup Setting 
-function cpanelwhm_additional_destination {
-	grep -lir "type: SFTP" /var/cpanel/backups/*.backup_destination 2>/dev/null|while read -r DSTBACKUPCONFIG;do
+function cpanelwhm_rbackupsh {
+	whmapi1 backup_destination_list|grep -w "id:"|awk '{print $2}'|while read -r DSTBACKUPID;do
+		TYPE=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "type:"|awk '{print $2}')
+		if [[ $TYPE == SFTP ]];then
 			linerstrip
-	        if [[ -f $DSTBACKUPCONFIG ]];then
-				echo " Additional Destination Config  : $DSTBACKUPCONFIG"
-				echo " Destination Name               : $(awk '/^name:/ {print $2}' "$DSTBACKUPCONFIG")"
-				sftp_type
-				remote_host
-				path_dir
-				ssh_port
-				sftp_username
-				authentication_type
-				ssh_connection_test
-				linerstrip
-				local_backup_config
-				additional_backup_status
-				total_cpanel_account
-				running_process
-
-				create_backup_dir
-				do_cpmovebackup
-				do_cphomedirbackup
-				do_cpsystembackup
-
-				cpmove_backup_status
-				linerstrip
-				time_process
-				linerstrip
-				printf "\n"
-        	else
-	                echo " Additional Destination Config  : Not Found"
-                	linerstrip
-        	        echo " NOTE: There is no active additional destinations backup setting "
-	                echo " in WHM Backup. Please enable it from WHM -> Backup -> Backup "
-                	echo " Configuration -> Additional Destinations -> Destination Type: "
-                	echo " SFTP -> Create New Destination"
-                	linerstrip
-                	exit
-        	fi
+			echo " Destination Name               : $(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "name:"|awk '{print $2}')"
+			cpwhm_type
+			cpwhm_host
+			cpwhm_path
+			cpwhm_port
+			cpwhm_username
+			cpwhm_authtype
+			cpwhm_validate
+			cpwhm_connection_test
+			running_process
+			linerstrip
+			
+			cpwhm_local_backup_config
+			cpwhm_disabled
+			cpwhm_total_cpaccount
+			
+			cpwhm_create_backup_dir
+			do_cpmovebackup
+			do_cphomedirbackup
+			do_cpsystembackup
+			
+			cpwhm_backup_status
+			linerstrip
+			time_process
+			linerstrip
+			printf "\n"
+		else
+			linerstrip
+			echo " NOTE: There is no active additional destinations backup setting "
+			echo " in WHM Backup. Please enable it from WHM -> Backup -> Backup "
+			echo " Configuration -> Additional Destinations -> Destination Type: "
+			echo " SFTP -> Create New Destination"
+			linerstrip
+			exit
+		fi
 	done
 }
 
@@ -512,4 +522,4 @@ START_TIME=$(date +%s)
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 
 print_intro
-cpanelwhm_additional_destination
+cpanelwhm_rbackupsh
