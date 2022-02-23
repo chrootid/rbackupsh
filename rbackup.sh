@@ -16,6 +16,15 @@
 # Save and Validate Destination
 # Enable
 
+function jq_check {
+	if [[ -z $(which jq 2>/dev/null) ]];then
+        yum install jq -y >/dev/null 2>&1
+		if [[ -z $(which jq 2>/dev/null) ]];then
+			exit
+		fi
+fi
+}
+
 function linerstrip {
 	echo "-----------------------------------------------------------------------"
 }
@@ -522,4 +531,5 @@ START_TIME=$(date +%s)
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 
 print_intro
+jq_check
 cpanelwhm_rbackupsh
