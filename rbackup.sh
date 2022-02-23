@@ -264,7 +264,7 @@ function sshrsync_cpmovebackup {
 
 function do_cpmovebackup {
 	printf " cPmove Backup                  : Running "
-	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSERBACKUP;do
+	for CPUSERBACKUP in $(whmapi1 --output=jsonpretty list_users|jq ".data.users[]"|grep -Ev "(root)"|sort|sed 's/"//g');do
 		printf "\r cPmove Backup                  : Running %s" "$CPUSERBACKUP"
 		printf " %0.s" {0..50}
 		printf "\r cPmove Backup                  : Running %s" "$CPUSERBACKUP"
@@ -293,7 +293,7 @@ function sshrsync_cphomedirbackup {
 
 function do_cphomedirbackup {
 	printf " cPhomedir Backup               : Running "
-	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
+	for CPUSER in $(whmapi1 --output=jsonpretty list_users|jq ".data.users[]"|grep -Ev "(root)"|sort|sed 's/"//g');do
 		printf "\r cPhomedir Backup               : Running %s" "$CPUSER"
 		printf " %0.s" {0..50}
 		printf "\r cPhomedir Backup               : Running %s" "$CPUSER"
