@@ -31,7 +31,7 @@ function linerstrip {
 
 # Backup Running Process
 function running_process {
-    if [[ -n $($SSHRCE "pgrep -f $USERNAME|xargs ps|grep -Ev '(sshd:|pgrep|COMMAND)'") ]];then
+    if [[ -n $(pgrep -f rbackup.sh) ]];then
         echo " Running Process Check          : Already running. Please wait!"
 		linerstrip
 		exit
