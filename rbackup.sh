@@ -31,8 +31,8 @@ function linerstrip {
 
 # Backup Running Process
 function running_process {
-    if [[ -n $(pgrep -f rbackup.sh)  ]] &&  [[ -n $(pgrep -f "$SSHKEY") ]];then
-        echo " Running Process Check          : Already running. Please wait!"
+	if ( [[ -n $(pgrep -f rbackup.sh) ]] && [[ -n $(pgrep -f /root/.ssh/peradi_ardhrbackup_id_rsa) ]] ) || ( [[ -n $(pgrep -f rbackup.sh) ]] && [[ -n $(pgrep -f rsync) ]] ) || ( [[ -n $(pgrep -f rbackup.sh) ]] && [[ -n $(pgrep -f /scripts/pkgacct) ]] );then 
+		echo " Running Process Check          : Already running. Please wait!"
 		linerstrip
 		exit
 	fi
