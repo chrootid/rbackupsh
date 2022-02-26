@@ -31,11 +31,11 @@ function linerstrip {
 
 # Backup Running Process
 function running_process {
-    if [[ -n $(pgrep -f rbackup.sh) ]];then
+    if [[ -n $(pgrep -f rbackup.sh)  ]] &&  [[ -n $(pgrep -f "$SSHKEY") ]];then
         echo " Running Process Check          : Already running. Please wait!"
 		linerstrip
 		exit
-    fi
+	fi
 }
 
 # Authentication Type
