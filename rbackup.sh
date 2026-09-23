@@ -16,10 +16,10 @@
 # Save and Validate Destination
 # Enable
 
-function jq_check {
-	if [[ -z $(which jq 2>/dev/null) ]];then
-        yum install jq -y >/dev/null 2>&1
-		if [[ -z $(which jq 2>/dev/null) ]];then
+function $jq_check {
+	if [[ -z $(which $JQ 2>/dev/null) ]];then
+        yum install $JQ -y >/dev/null 2>&1
+		if [[ -z $(which $JQ 2>/dev/null) ]];then
 			exit
 		fi
 fi
@@ -40,7 +40,7 @@ function running_process {
 
 # Authentication Type
 function cpwhm_authtype {
-	AUTHTYPE=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "authtype:"|awk '{print $2}')
+	AUTHTYPE=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.authtype')
 	if [[ $AUTHTYPE == "password" ]];then
         	echo " Authentication Type            : Password Authentication"
 		ssh_password
@@ -54,7 +54,7 @@ function cpwhm_authtype {
 
 # Remote Host
 function cpwhm_host {
-	RBACKUP=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "host:"|awk '{print $2}')
+	RBACKUP=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.host')
 	if [[ -n $RBACKUP ]];then
 		echo " Remote Host                    : $RBACKUP"
 	fi
@@ -62,7 +62,7 @@ function cpwhm_host {
 
 # SFTP Additional Destination Backup Type
 function cpwhm_type {
-	TYPE=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "type:"|awk '{print $2}')
+	TYPE=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.type')
 	if [[ $TYPE == "SFTP" ]];then
 		echo " Backup Type                    : $TYPE"
 	else
@@ -76,7 +76,7 @@ function cpwhm_type {
 
 # Backup Directory
 function cpwhm_path {
-	RBACKUPDIR=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "path:"|awk '{print $2}'|sed "s/'//g")
+	RBACKUPDIR=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.path')
 	if [[ -z $RBACKUPDIR ]];then
 		RBACKUPDIR="~"
 		echo " Backup Directory               : $RBACKUPDIR"
@@ -87,7 +87,7 @@ function cpwhm_path {
 
 # Port
 function cpwhm_port {
-	RSSHPORT=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "port:"|awk '{print $2}')
+	RSSHPORT=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.port')
 	if [[ -z $RSSHPORT ]];then
 		RSSHPORT="22"
 		echo " Port                           : $RSSHPORT"
@@ -98,7 +98,7 @@ function cpwhm_port {
 
 # SSH Password
 function ssh_password {
-	SSHPASSWORD=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "password:"|awk '{print $2}')
+	SSHPASSWORD=$($WHMAPI1 backup_destination_get id="$DSTBACKUPID"|grep -w "password:"|awk '{print $2}')
 	SSHPASS=$(which sshpass 2>/dev/null)
 	if [[ -n $SSHPASSWORD ]];then
 		if [[ -f $SSHPASS ]];then
@@ -118,7 +118,7 @@ function ssh_password {
 
 # SSH Private Key
 function ssh_private_key {
-	SSHKEY=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "privatekey:"|awk '{print $2}')
+	SSHKEY=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.privatekey')
 	if [[ -f $SSHKEY ]];then
 		echo " Private Key                    : $SSHKEY"
 	else
@@ -132,7 +132,7 @@ function ssh_private_key {
 
 # SFTP Username
 function cpwhm_username {
-	USERNAME=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "username:"|awk '{print $2}')
+	USERNAME=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.username')
 	if [[ -n $USERNAME ]];then
 		echo " Remote Account Username        : $USERNAME"
 	elif [[ -z $USERNAME ]];then
@@ -146,7 +146,7 @@ function cpwhm_username {
 
 # Validate Destination
 function cpwhm_validate {
-	VALIDATESTATUS=$(whmapi1 backup_destination_validate id="$DSTBACKUPID" disableonfail=0|grep -w reason:""|awk '{print $2}')
+	VALIDATESTATUS=$($WHMAPI1 --output=jsonpretty backup_destination_validate id="$DSTBACKUPID" disableonfail=0|$JQ -r '.metadata.reason')
 	if [[ $VALIDATESTATUS == "OK" ]];then
 		echo " Validate Destination           : Succeeded"
 	else
@@ -180,17 +180,17 @@ function cpwhm_connection_test {
 
 # Local Backup Config
 	function cpwhm_local_backup_config {
-	LOCALBACKUP=$(awk '/^BACKUPENABLE:/ {print $2}' /var/cpanel/backups/config|sed "s/'//g")
-	if [[ $LOCALBACKUP == "yes" ]];then
+	LOCALBACKUP=$($WHMAPI1 --output=jsonpretty backup_config_get|$JQ -r '.data.backup_config.backupenable')
+	if [[ $LOCALBACKUP -eq 1 ]];then
 		echo " Local Backup Status            : Enabled. NOTE: It should be disabled to prevent local disk usage full"
-	elif [[ $LOCALBACKUP == "no" ]];then
+	elif [[ $LOCALBACKUP -eq 0 ]];then
 		echo " Local Backup Status            : Disabled"
 	fi
 }
 
 # Additional Backup Status 
 function cpwhm_disabled {
-	DESTINATIONSTATUS=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "disabled:"|awk '{print $2}')
+	DESTINATIONSTATUS=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.disabled')
 	if [[ $DESTINATIONSTATUS -eq 0 ]];then
 		echo " Remote Backup Status           : Enabled"
 	elif [[ $DESTINATIONSTATUS -eq 1 ]];then
@@ -206,7 +206,7 @@ function cpwhm_disabled {
 
 # Total cPanel Account
 function cpwhm_total_cpaccount {
-	TOTALCPANELACCOUNT=$(cut -d: -f1 /etc/trueuserowners|wc -l)
+	TOTALCPANELACCOUNT=$($WHMAPI1 --output=jsonpretty listaccts|$JQ -r '.data.acct[].user'|wc -l)
 	if [[ $TOTALCPANELACCOUNT -eq 0 ]];then
 		echo " Total cPanel Account           : $TOTALCPANELACCOUNT Account"
 		linerstrip
@@ -224,7 +224,7 @@ function cpwhm_total_cpaccount {
 function cpwhm_backup_status {
 	$SSHRCE "echo > $BACKUPDIR/logs/failed" 2>/dev/null
 	# cPmove Backup Check
-	cut -d: -f1 /etc/trueuserowners|sort|while read -r CPUSER;do
+	$WHMAPI1 --output=jsonpretty listaccts|$JQ -r '.data.acct[].user'|sort|while read -r CPUSER;do
 		if [[ $($SSHRCE "ls $BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" 2>/dev/null) != "$BACKUPDIR/accounts/cpmove-$CPUSER.tar.gz" ]];then
 			$SSHRCE "echo "failed: cpmove-"$CPUSER".tar.gz not found" >> $BACKUPDIR/logs/failed" 2>/dev/null
 		fi
@@ -273,7 +273,7 @@ function sshrsync_cpmovebackup {
 
 function do_cpmovebackup {
 	printf " cPmove Backup                  : Running "
-	for CPUSERBACKUP in $(whmapi1 --output=jsonpretty list_users|jq ".data.users[]"|grep -Ev "(root)"|sort|sed 's/"//g');do
+	for CPUSERBACKUP in $($WHMAPI1 --output=jsonpretty list_users|$JQ ".data.users[]"|grep -Ev "(root)"|sort|sed 's/"//g');do
 		printf "\r cPmove Backup                  : Running %s" "$CPUSERBACKUP"
 		printf " %0.s" {0..50}
 		printf "\r cPmove Backup                  : Running %s" "$CPUSERBACKUP"
@@ -302,7 +302,7 @@ function sshrsync_cphomedirbackup {
 
 function do_cphomedirbackup {
 	printf " cPhomedir Backup               : Running "
-	for CPUSER in $(whmapi1 --output=jsonpretty list_users|jq ".data.users[]"|grep -Ev "(root)"|sort|sed 's/"//g');do
+	for CPUSER in $($WHMAPI1 --output=jsonpretty listaccts|$JQ -r '.data.acct[].user');do
 		printf "\r cPhomedir Backup               : Running %s" "$CPUSER"
 		printf " %0.s" {0..50}
 		printf "\r cPhomedir Backup               : Running %s" "$CPUSER"
@@ -319,7 +319,7 @@ function do_cphomedirbackup {
 
 # Backup System
 function do_cpsystembackup {
-	UPLOADBACKUPSYSTEM=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "upload_system_backup:"|awk '{print $2}')
+	UPLOADBACKUPSYSTEM=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.upload_system_backup')
 	if [[ $UPLOADBACKUPSYSTEM -eq 1 ]];then
 		printf " cPsystem Backup                : Running "
 		backup_system_dirs
@@ -483,11 +483,11 @@ function time_process () {
 
 # WHM Additional Destination Backup Setting 
 function cpanelwhm_rbackupsh {
-	whmapi1 backup_destination_list|grep -w "id:"|awk '{print $2}'|while read -r DSTBACKUPID;do
-		TYPE=$(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "type:"|awk '{print $2}')
+	$WHMAPI1 backup_destination_list|grep -w "id:"|awk '{print $2}'|while read -r DSTBACKUPID;do
+		TYPE=$($WHMAPI1 --output=jsonpretty backup_destination_get id="$DSTBACKUPID"|$JQ -r '.data.type')
 		if [[ $TYPE == SFTP ]];then
 			linerstrip
-			echo " Destination Name               : $(whmapi1 backup_destination_get id="$DSTBACKUPID"|grep -w "name:"|awk '{print $2}')"
+			echo " Destination Name               : $($WHMAPI1 backup_destination_get id="$DSTBACKUPID"|grep -w "name:"|awk '{print $2}')"
 			cpwhm_type
 			cpwhm_host
 			cpwhm_path
@@ -529,6 +529,8 @@ clear;
 BACKUPDIR=$(date +%F)
 START_TIME=$(date +%s)
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
+WHMAPI1=$(command -v whmapi1||echo /usr/sbin/$WHMAPI1)
+JQ=$(command -v jq||echo /usr/bin/$JQ)
 
 print_intro
 jq_check
